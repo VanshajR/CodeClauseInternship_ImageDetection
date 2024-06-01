@@ -3,7 +3,6 @@ import cv2
 cap = cv2.VideoCapture(0)
 cap.set(3,640)
 cap.set(4,480)
-# weights = "MobileNetSSD_deploy.caffemodel"
 
 # Define confidence threshold
 confidence_threshold = 0.5
@@ -18,6 +17,7 @@ with open(labels_path, 'rt') as f:
 print(labels)
 
 # prototxt = 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
+# weights = "MobileNetSSD_deploy.caffemodel"
 prototxt = 'ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt'
 weights = 'frozen_inference_graph.pb'
 net = cv2.dnn_DetectionModel(weights, prototxt)
