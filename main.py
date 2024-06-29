@@ -2,6 +2,7 @@ import cv2
 import customtkinter as cust
 from PIL import Image, ImageTk
 from customtkinter import CTkImage
+from tkinter import filedialog
 
 cust.set_appearance_mode("dark")
 
@@ -40,13 +41,15 @@ class ObjectDetectionApp(cust.CTk):
         self.stop_button = cust.CTkButton(self.control_frame, text="Stop Detection", command=self.stop_detection)
         self.stop_button.pack(pady=10, padx=20, side='left')
 
+        self.upload_button = cust.CTkButton(self.control_frame, text="Upload Image", command=self.upload_image)
+        self.upload_button.pack(pady=10, padx=20, side='left')
+
         self.video_frame = cust.CTkFrame(self)
         self.video_frame.pack(pady=20)
 
-        self.video_label = cust.CTkLabel(self.video_frame, text="No Video Feed", font=("Helvetica", 16))
+        self.video_label = cust.CTkLabel(self.video_frame, text="No Video/Image Feed", font=("Helvetica", 16))
         self.video_label.pack()
 
-        # Placeholder image
         self.placeholder_img = Image.new('RGB', (640, 480), color='gray')
         self.ctk_placeholder_img = CTkImage(light_image=self.placeholder_img, dark_image=self.placeholder_img, size=(640, 480))
         self.video_label.configure(image=self.ctk_placeholder_img)
@@ -61,7 +64,7 @@ class ObjectDetectionApp(cust.CTk):
             self.cap.set(4, 480)
         self.running = True
         self.geometry("700x700")
-        self.video_label.configure(image=self.ctk_placeholder_img, text="")  # Use placeholder image
+        self.video_label.configure(image=self.ctk_placeholder_img, text="")
 
     def stop_detection(self):
         self.running = False
@@ -70,6 +73,25 @@ class ObjectDetectionApp(cust.CTk):
         cv2.destroyAllWindows()
         self.video_label.configure(image=self.ctk_placeholder_img, text="No Video Feed, Detecting again takes a few seconds....")
         self.geometry("400x400")
+
+    def upload_image(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            img = cv2.imread(file_path)
+            self.process_image(img)
+
+    def process_image(self, img):
+        l_ids, confs, bbox = self.net.detect(img, confThreshold=self.confidence_threshold)
+        if len(l_ids) != 0:
+            for l_id, conf, box in zip(l_ids.flatten(), confs.flatten(), bbox):
+                cv2.rectangle(img, box, (0, 255, 0), 2)
+                cv2.putText(img, self.labels[l_id - 1], (box[0] + 10, box[1] + 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(img, str(round(conf * 100, 2)) + "%", (box[0] + 200, box[1] + 30), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+        cv2image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(cv2image)
+        ctk_img = CTkImage(light_image=pil_img, dark_image=pil_img, size=(640, 480))
+        self.video_label.configure(image=ctk_img, text="")
 
     def update_frame(self):
         if self.running:
@@ -95,5 +117,5 @@ class ObjectDetectionApp(cust.CTk):
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    app = ObjectDetectionApp("Object Detection App", 400, 400)
+    app = ObjectDetectionApp("Object Detection App", 700, 500)
     app.mainloop()
