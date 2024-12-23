@@ -22,15 +22,15 @@ except Exception as e:
     st.error(f"Error loading model: {str(e)}")
     st.stop()
 
-# Define the video processor
+# Define the video processor class that uses WebRTC
 class VideoProcessor(VideoProcessorBase):
     def __init__(self):
         self.confidence_threshold = 0.65  # Default threshold
 
     def recv(self, frame):
-        # Convert frame to a NumPy array
+        # Convert frame to a NumPy array (from WebRTC frame)
         img = frame.to_ndarray(format="bgr24")
-        
+
         # Perform object detection
         detections = net.detect(img, confThreshold=self.confidence_threshold)
         l_ids, confs, bbox = detections if len(detections) == 3 else (None, None, None)
@@ -43,11 +43,17 @@ class VideoProcessor(VideoProcessorBase):
 
         return frame.from_ndarray(img, format="bgr24")
 
-# Streamlit app
+# Streamlit app setup
 st.title("🔍 Object Detection App")
 confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.65, 0.05)
 
-# Start the webcam
+# Update the confidence threshold value dynamically
+def update_confidence_threshold(value):
+    VideoProcessor.confidence_threshold = value
+
+update_confidence_threshold(confidence_threshold)
+
+# Start the webcam using WebRTC
 webrtc_streamer(
     key="object-detection",
     video_processor_factory=VideoProcessor,
