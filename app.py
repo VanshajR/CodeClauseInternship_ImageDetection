@@ -15,7 +15,7 @@ weights = 'frozen_inference_graph.pb'
 
 try:
     net = cv2.dnn_DetectionModel(weights, prototxt)
-    net.setInputSize(300, 320)
+    net.setInputSize(300, 300)
     net.setInputScale(1.0 / 127.5)
     net.setInputMean((127.5, 127.5, 127.5))
     net.setInputSwapRB(True)
@@ -28,23 +28,29 @@ st.set_page_config(page_title="Object Detection", layout="wide")
 # Sidebar settings
 st.sidebar.title("⚙️ Settings")
 source = st.sidebar.radio("Select Input Source", ["Webcam", "Upload Image", "Capture Image"])
-confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.05)  # Default: 0.5
+confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.5, 0.05)
 
 # Detection function
 def detect_objects(image):
-    # Detect objects
     detections = net.detect(image, confThreshold=confidence_threshold)
     if len(detections) == 3:
         l_ids, confs, bbox = detections
     else:
-        return image  # Return the original image if no detections
+        return image
 
-    # Draw detections
     for l_id, conf, box in zip(l_ids.flatten(), confs.flatten(), bbox):
         x, y, w, h = box
-        label = f"{labels[l_id - 1]}: {conf * 100:.2f}%"
+        label = f"{labels[l_id - 1]}: {conf * 100:.1f}%"
         cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.putText(image, label, (x, y - 10 if y > 20 else y + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        
+        # Adjust label font size and position
+        font_scale = 0.6
+        thickness = 2
+        (text_w, text_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        text_x = x
+        text_y = y - 10 if y > 20 else y + text_h + 10
+        cv2.rectangle(image, (text_x, text_y - text_h - 5), (text_x + text_w, text_y + 5), (0, 255, 0), cv2.FILLED)
+        cv2.putText(image, label, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
 
     return image
 
