@@ -51,8 +51,11 @@ confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.65,
 # Object detection function
 def detect_objects(image):
     try:
-        # Detect objects in the image
-        detections = net.detect(image, confThreshold=confidence_threshold)
+        # Resize image for consistent input size
+        resized_image = cv2.resize(image, (300, 320))
+        
+        # Detect objects
+        detections = net.detect(resized_image, confThreshold=confidence_threshold)
 
         # Ensure the detections return 3 components
         if len(detections) == 3:
@@ -108,7 +111,7 @@ elif source == "Upload Image":
             # Ensure image is valid and processable by OpenCV
             if image_array.ndim == 3:
                 detected_image = detect_objects(image_array)
-                st.image(detected_image, caption="Detected Image", use_column_width=True)
+                st.image(detected_image, caption="Detected Image", use_container_width=True)
             else:
                 st.error("Uploaded image is not valid for detection.")
         except Exception as e:
@@ -123,7 +126,7 @@ elif source == "Capture Image":
 
             if img is not None:
                 detected_image = detect_objects(img)
-                st.image(detected_image, caption="Captured Image", use_column_width=True)
+                st.image(detected_image, caption="Captured Image", use_container_width=True)
             else:
                 st.error("Captured image is not valid for detection.")
         except Exception as e:
