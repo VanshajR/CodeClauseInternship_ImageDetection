@@ -1,6 +1,6 @@
 import cv2
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode, ClientSettings
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, WebRtcMode
 import numpy as np
 
 # Load COCO labels
@@ -21,14 +21,6 @@ try:
 except Exception as e:
     st.error(f"Error loading model: {str(e)}")
     st.stop()
-
-# Define the WebRTC client settings for better webcam handling
-client_settings = ClientSettings(
-    media_stream_constraints={
-        "video": True,
-        "audio": False,
-    },
-)
 
 # Define the video processor class for object detection
 class VideoProcessor(VideoTransformerBase):
@@ -61,10 +53,14 @@ choice = st.sidebar.radio(
 )
 
 if choice == "Live Webcam Feed":
+    rtc_configuration = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    media_stream_constraints = {"video": True, "audio": False}
+
     webrtc_streamer(
         key="object-detection",
         mode=WebRtcMode.SENDRECV,
-        client_settings=client_settings,
+        rtc_configuration=rtc_configuration,
+        media_stream_constraints=media_stream_constraints,
         video_processor_factory=VideoProcessor,
     )
 
