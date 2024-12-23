@@ -53,7 +53,10 @@ choice = st.sidebar.radio(
 )
 
 if choice == "Live Webcam Feed":
-    rtc_configuration = {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    rtc_configuration = {
+    "iceServers": [{"urls": ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"]}]
+    }
+
     media_stream_constraints = {"video": True, "audio": False}
 
     webrtc_streamer(
@@ -62,6 +65,7 @@ if choice == "Live Webcam Feed":
         rtc_configuration=rtc_configuration,
         media_stream_constraints=media_stream_constraints,
         video_processor_factory=VideoProcessor,
+        async_processing=True
     )
 
 elif choice == "Upload Image":
