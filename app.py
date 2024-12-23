@@ -2,6 +2,7 @@ import cv2
 import streamlit as st
 import numpy as np
 from PIL import Image
+from streamlit_webrtc import VideoProcessorBase, webrtc_streamer, WebRtcMode, RTCConfiguration
 
 # Load COCO labels
 labels_path = 'coco.names'
@@ -58,51 +59,61 @@ confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.65,
 
 # Detection function
 def detect_objects(image):
+    # Detect objects
     detections = net.detect(image, confThreshold=confidence_threshold)
-    l_ids, confs, bbox = detections if len(detections) == 3 else (None, None, None)
+    
+    # Ensure the detections return 3 values
+    if len(detections) == 3:
+        l_ids, confs, bbox = detections
+    else:
+        l_ids, confs, bbox = None, None, None
 
+    # Check if detection results exist
     if l_ids is not None:
         for l_id, conf, box in zip(l_ids.flatten(), confs.flatten(), bbox):
             cv2.rectangle(image, box, (0, 255, 0), 2)
             label = f"{labels[l_id - 1]}: {conf * 100:.2f}%"
-            cv2.putText(image, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            cv2.putText(image, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 
     return image
 
-# Webcam mode
+
+# Create a WebRTC video processor for object detection
+class VideoProcessor(VideoProcessorBase):
+    def __init__(self):
+        self.frame_count = 0
+    
+    def recv(self, frame):
+        # Convert frame to numpy array and detect objects
+        img = frame.to_ndarray(format="bgr24")
+
+        # Resize the frame for better performance (resize to 640x480)
+        img_resized = cv2.resize(img, (640, 480))
+
+        # Perform object detection on the resized image
+        detected_image = detect_objects(img_resized)
+
+        # Convert the image to RGB format for correct display
+        detected_image_rgb = cv2.cvtColor(detected_image, cv2.COLOR_BGR2RGB)
+        return detected_image_rgb
+
+# Webcam mode using WebRTC
 if source == "Webcam":
-    webcam_button = st.button("📹 Toggle Webcam")
-    if "webcam_running" not in st.session_state:
-        st.session_state.webcam_running = False
+    st.info("Webcam is running using WebRTC. Please allow camera access.")
+    
+    # WebRTC configuration for video only (disabling audio)
+    rtc_configuration = RTCConfiguration(
+        {"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]}  # STUN server
+    )
 
-    if webcam_button:
-        st.session_state.webcam_running = not st.session_state.webcam_running
-
-    frame_placeholder = st.empty()
-
-    if st.session_state.webcam_running:
-        st.info("Webcam is running. Click 'Toggle Webcam' to stop.")
-        cap = cv2.VideoCapture(0)
-        while st.session_state.webcam_running:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("Failed to access webcam.")
-                break
-
-            # Object detection
-            frame = detect_objects(frame)
-
-            # Convert the frame from BGR to RGB (for Streamlit)
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Resize to fit the screen without scrolling (Fixed window size)
-            frame_resized = cv2.resize(frame_rgb, (640, 480))  # Adjust the size as needed
-            frame_placeholder.image(frame_resized, use_column_width=False)
-
-        cap.release()
-        frame_placeholder.empty()
-    else:
-        st.warning("Webcam is stopped. Click 'Toggle Webcam' to start.")
+    # Make sure audio is completely disabled and only video is used
+    webrtc_streamer(
+        key="example", 
+        video_processor_factory=VideoProcessor,  # Using the new video processor
+        mode=WebRtcMode.SENDONLY,  # Send only video, no audio
+        rtc_configuration=rtc_configuration,  # Pass RTC configuration with no audio
+        media_stream_constraints={"video": True, "audio": False}  # Explicitly disable audio
+    )
 
 # Image upload mode
 elif source == "Upload Image":
@@ -137,7 +148,7 @@ elif source == "Capture Image":
         st.session_state.webcam_running = False
 
     # Use Streamlit's camera input for capturing an image
-    img_file_buffer = st.camera_input("📸 Capture an Image")
+    img_file_buffer = st.camera_input("📸Capture an Image")
     if img_file_buffer is not None:
         bytes_data = img_file_buffer.getvalue()
         img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
@@ -145,10 +156,11 @@ elif source == "Capture Image":
         # Perform object detection
         detected_image = detect_objects(img)
 
+        # Convert BGR to RGB for proper display in Streamlit
+        detected_image_rgb = cv2.cvtColor(detected_image, cv2.COLOR_BGR2RGB)
+
         # Resize the image to fit the screen width without scrolling
-        detected_image_resized = cv2.resize(detected_image, (640, 480))
+        detected_image_resized = cv2.resize(detected_image_rgb, (640, 480))
 
-        # Display results without changing colors
+        # Display results with correct colors
         st.image(detected_image_resized, caption="Captured & Detected Image", use_column_width=False)
-
-
