@@ -40,7 +40,7 @@ class VideoProcessor(VideoTransformerBase):
                 label = f"{labels[l_id - 1]}: {conf * 100:.2f}%"
                 cv2.putText(img, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        return frame.from_ndarray(img, format="bgr24")
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # Streamlit app setup
 st.title("🔍 Object Detection App")
@@ -54,12 +54,12 @@ choice = st.sidebar.radio(
 
 if choice == "Live Webcam Feed":
     rtc_configuration = {
-    "iceServers": [{"urls": ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"]}]
+        "iceServers": [{"urls": ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"]}]
     }
 
     media_stream_constraints = {"video": True, "audio": False}
 
-    webrtc_streamer(
+    webrtc_ctx = webrtc_streamer(
         key="object-detection",
         mode=WebRtcMode.SENDRECV,
         rtc_configuration=rtc_configuration,
@@ -67,6 +67,10 @@ if choice == "Live Webcam Feed":
         video_processor_factory=VideoProcessor,
         async_processing=True
     )
+
+    # Allow the user to adjust the confidence threshold dynamically
+    if webrtc_ctx.video_processor:
+        webrtc_ctx.video_processor.confidence_threshold = confidence_threshold
 
 elif choice == "Upload Image":
     uploaded_file = st.file_uploader("Choose an image file", type=["jpg", "png", "jpeg"])
