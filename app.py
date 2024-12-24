@@ -59,30 +59,33 @@ confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.65,
 
 # Detection function
 def detect_objects(image):
-    # Detect objects
-    detections = net.detect(image, confThreshold=confidence_threshold)
-    
-    # Ensure the detections return 3 values
-    if len(detections) == 3:
-        l_ids, confs, bbox = detections
-    else:
-        l_ids, confs, bbox = None, None, None
+    try:
+        # Detect objects
+        detections = net.detect(image, confThreshold=confidence_threshold)
 
-    # Check if detection results exist
-    if l_ids is not None:
-        for l_id, conf, box in zip(l_ids.flatten(), confs.flatten(), bbox):
-            cv2.rectangle(image, box, (0, 255, 0), 2)
-            label = f"{labels[l_id - 1]}: {conf * 100:.2f}%"
-            cv2.putText(image, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+        # Ensure detections contain three outputs
+        if len(detections) == 3:
+            l_ids, confs, bbox = detections
+        else:
+            l_ids, confs, bbox = None, None, None
 
-    return image
+        # Process detections if valid
+        if l_ids is not None and confs is not None and bbox is not None:
+            for l_id, conf, box in zip(l_ids.flatten(), confs.flatten(), bbox):
+                cv2.rectangle(image, box, (0, 255, 0), 2)
+                label = f"{labels[l_id - 1]}: {conf * 100:.2f}%"
+                cv2.putText(image, label, (box[0], box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 
+        return image
+    except Exception as e:
+        st.warning(f"Error during object detection: {str(e)}")
+        return image
 
 # Create a WebRTC video processor for object detection
 class VideoProcessor(VideoProcessorBase):
     def __init__(self):
         self.frame_count = 0
-    
+
     def recv(self, frame):
         # Convert frame to numpy array and detect objects
         img = frame.to_ndarray(format="bgr24")
@@ -123,41 +126,26 @@ elif source == "Upload Image":
 
     uploaded_file = st.file_uploader("📂 Choose an image file", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        # Open the uploaded image using PIL
-        uploaded_image = Image.open(uploaded_file)
-
-        # Ensure proper orientation by correcting EXIF orientation if present
         try:
-            from PIL import ExifTags
-            for orientation in ExifTags.TAGS.keys():
-                if ExifTags.TAGS[orientation] == "Orientation":
-                    break
-            exif = uploaded_image._getexif()
-            if exif is not None:
-                orientation_value = exif.get(orientation, None)
-                if orientation_value == 3:
-                    uploaded_image = uploaded_image.rotate(180, expand=True)
-                elif orientation_value == 6:
-                    uploaded_image = uploaded_image.rotate(270, expand=True)
-                elif orientation_value == 8:
-                    uploaded_image = uploaded_image.rotate(90, expand=True)
+            # Open the uploaded image using PIL
+            uploaded_image = Image.open(uploaded_file)
+
+            # Ensure image is in RGB mode (removes alpha channel if exists)
+            uploaded_image = uploaded_image.convert("RGB")
+
+            # Convert the PIL image to a NumPy array (this will preserve RGB format)
+            image_array = np.array(uploaded_image)
+
+            # Object detection
+            detected_image = detect_objects(image_array)
+
+            # Resize the image to fit the screen width without scrolling
+            detected_image_resized = cv2.resize(detected_image, (640, 480))
+
+            # Display results
+            st.image(detected_image_resized, caption="Detected Image", use_container_width=True)
         except Exception as e:
-            st.warning(f"Warning: Could not process EXIF data. {str(e)}")
-
-        # Ensure image is in RGB mode (removes alpha channel if exists)
-        uploaded_image = uploaded_image.convert("RGB")
-
-        # Convert the PIL image to a NumPy array (this will preserve RGB format)
-        image_array = np.array(uploaded_image)
-
-        # Object detection
-        detected_image = detect_objects(image_array)
-
-        # Resize the image to fit the screen width without scrolling
-        detected_image_resized = cv2.resize(detected_image, (640, 480))
-
-        # Display results without changing colors
-        st.image(detected_image_resized, caption="Detected Image", use_column_width=False)
+            st.error(f"Error processing the uploaded image: {str(e)}")
 
 # Capture Image mode
 elif source == "Capture Image":
@@ -168,17 +156,20 @@ elif source == "Capture Image":
     # Use Streamlit's camera input for capturing an image
     img_file_buffer = st.camera_input("📸Capture an Image")
     if img_file_buffer is not None:
-        bytes_data = img_file_buffer.getvalue()
-        img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+        try:
+            bytes_data = img_file_buffer.getvalue()
+            img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
 
-        # Perform object detection
-        detected_image = detect_objects(img)
+            # Perform object detection
+            detected_image = detect_objects(img)
 
-        # Convert BGR to RGB for proper display in Streamlit
-        detected_image_rgb = cv2.cvtColor(detected_image, cv2.COLOR_BGR2RGB)
+            # Convert BGR to RGB for proper display in Streamlit
+            detected_image_rgb = cv2.cvtColor(detected_image, cv2.COLOR_BGR2RGB)
 
-        # Resize the image to fit the screen width without scrolling
-        detected_image_resized = cv2.resize(detected_image_rgb, (640, 480))
+            # Resize the image to fit the screen width without scrolling
+            detected_image_resized = cv2.resize(detected_image_rgb, (640, 480))
 
-        # Display results with correct colors
-        st.image(detected_image_resized, caption="Captured & Detected Image", use_column_width=False)
+            # Display results
+            st.image(detected_image_resized, caption="Captured & Detected Image", use_container_width=True)
+        except Exception as e:
+            st.error(f"Error processing the captured image: {str(e)}")
