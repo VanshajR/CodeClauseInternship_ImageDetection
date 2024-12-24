@@ -63,11 +63,13 @@ def detect_objects(image):
         # Detect objects
         detections = net.detect(image, confThreshold=confidence_threshold)
 
-        # Ensure detections contain three outputs
-        if len(detections) == 3:
+        # Check if detections contain three outputs
+        if detections and len(detections) == 3:
             l_ids, confs, bbox = detections
         else:
-            l_ids, confs, bbox = None, None, None
+            # If detections are invalid, return the original image without modifications
+            st.warning("No valid detections were made.")
+            return image
 
         # Process detections if valid
         if l_ids is not None and confs is not None and bbox is not None:
@@ -78,8 +80,10 @@ def detect_objects(image):
 
         return image
     except Exception as e:
+        # Log and display any detection errors
         st.warning(f"Error during object detection: {str(e)}")
         return image
+
 
 # Create a WebRTC video processor for object detection
 class VideoProcessor(VideoProcessorBase):
