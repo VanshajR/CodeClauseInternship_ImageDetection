@@ -126,6 +126,24 @@ elif source == "Upload Image":
         # Open the uploaded image using PIL
         uploaded_image = Image.open(uploaded_file)
 
+        # Ensure proper orientation by correcting EXIF orientation if present
+        try:
+            from PIL import ExifTags
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == "Orientation":
+                    break
+            exif = uploaded_image._getexif()
+            if exif is not None:
+                orientation_value = exif.get(orientation, None)
+                if orientation_value == 3:
+                    uploaded_image = uploaded_image.rotate(180, expand=True)
+                elif orientation_value == 6:
+                    uploaded_image = uploaded_image.rotate(270, expand=True)
+                elif orientation_value == 8:
+                    uploaded_image = uploaded_image.rotate(90, expand=True)
+        except Exception as e:
+            st.warning(f"Warning: Could not process EXIF data. {str(e)}")
+
         # Ensure image is in RGB mode (removes alpha channel if exists)
         uploaded_image = uploaded_image.convert("RGB")
 
