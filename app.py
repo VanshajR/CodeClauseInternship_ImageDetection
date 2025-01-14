@@ -55,7 +55,9 @@ st.title("🔍 Object Detection App")
 
 st.sidebar.title("⚙️ Settings")
 st.sidebar.markdown(
-    """As of the last update to this code, the live feed detection isn't working on this deployed application due to a defect in the streamlit library that allows for usage of the webcam for live feeds, however, it works when the app is run locally."""
+    """As of the last update to this code, the live feed detection isn't working on this deployed application due to a defect in the streamlit library that allows for usage of the webcam for live feeds, however, it works when the app is run locally.
+    
+    Other funcationalities are operational."""
 )
 source = st.sidebar.radio("Select Input Source", ["Webcam", "Upload Image", "Capture Image"])
 confidence_threshold = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.65, 0.05)  # Default set to 0.65
