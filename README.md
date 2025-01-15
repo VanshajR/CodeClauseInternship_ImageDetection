@@ -30,7 +30,7 @@ It also includes a streamlit app that does the same.
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/VanshajR/Object-Detection
+   git clone https://github.com/VanshajR/Object-Detection.git
    cd Object-Detection
    ```
 
