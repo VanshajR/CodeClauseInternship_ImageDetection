@@ -1,7 +1,9 @@
 # Object Detection Application
 
 This repository contains an object detection application built using OpenCV and TensorFlow's pre-trained SSD MobileNet model. The app allows users to detect objects in real-time using a webcam feed or to upload an image for detection.
-It also includes a streamlit app that does the same.
+It also includes a streamlit app that does the same. Check out the hosted app here:
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://objects-vanshajr.streamlit.app)
 
 ## Features
 
@@ -60,6 +62,7 @@ It also includes a streamlit app that does the same.
 
 - Ensure the `coco.names`, `ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt`, and `frozen_inference_graph.pb` files are in the same directory as `app.py`.
 - For real-time detection, a webcam should be connected and accessible.
+- As of the last update, the `streamlit_webrtc` library which streamlit itself uses for live feeds through webcams was not working, thus the streamlit app did not work for live feeds.
 
 ## License
 
